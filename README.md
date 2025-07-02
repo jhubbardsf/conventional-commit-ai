@@ -127,8 +127,9 @@ aic-commit --config ./my-config.json
 | `--config <path>`             | Path to custom configuration file              |
 | `--model <model>`             | AI model to use (overrides config)             |
 | `--provider <provider>`       | AI provider: openai, anthropic, gemini         |
-| `--max-tokens <number>`       | Maximum tokens for AI response (1-4000)        |
+| `--max-tokens <number>`       | Maximum tokens for AI response (1-8000)        |
 | `--choices <number>`          | Generate multiple options to choose from (2-5) |
+| `--detailed`                  | Generate detailed multi-line commit messages   |
 | `--dry-run`                   | Generate message without committing            |
 | `-v, --verbose`               | Show detailed progress information             |
 | `--debug`                     | Show debug information                         |
@@ -358,6 +359,67 @@ Select option (1-3): 2
 aic-commit --choices 3 --dry-run --json
 ```
 
+### Detailed Commit Messages
+
+Generate comprehensive multi-line commit messages with bullet-point explanations:
+
+```bash
+# Generate detailed commit with explanations
+aic-commit --detailed --max-tokens 400
+
+# Combine detailed with multiple choices
+aic-commit --detailed --choices 3 --max-tokens 600
+
+# Preview detailed format
+aic-commit --detailed --dry-run --max-tokens 400
+```
+
+**Example Output:**
+
+```
+feat(auth): implement user authentication system
+
+- add login and signup forms with validation
+- integrate JWT token management for sessions
+- create password reset functionality via email
+- implement role-based access control middleware
+- add user profile management endpoints
+```
+
+**Detailed with Multiple Choices:**
+
+```
+Choose your commit message:
+1. feat(auth): implement user authentication system
+
+- add login and signup forms with validation
+- integrate JWT token management for sessions
+- create password reset functionality via email
+- implement role-based access control middleware
+
+2. feat(security): create user authentication features
+
+- design secure login flow with input validation
+- develop JWT-based session management system
+- build password recovery via email verification
+- add user role permissions and access control
+
+3. feat(backend): develop authentication infrastructure
+
+- create user registration and login endpoints
+- implement secure session handling with JWT
+- add password reset email functionality
+- build role-based permission system
+
+Select option (1-3): _
+```
+
+**Token Requirements for Detailed Commits:**
+
+- **Simple detailed**: 300-500 tokens
+- **Detailed + choices**: 500-800 tokens
+- **Complex projects**: 600-1000 tokens
+
 ### Troubleshooting Token Limits
 
 If you encounter "MAX_TOKENS" errors, especially with Gemini:
@@ -369,10 +431,14 @@ aic-commit --max-tokens 300
 # For complex changes, use even higher limits
 aic-commit --max-tokens 500
 
+# For detailed commits, use higher token limits
+aic-commit --detailed --max-tokens 600
+
 # Provider-specific recommendations:
 # OpenAI: 150-200 tokens (efficient)
 # Anthropic: 150-250 tokens (balanced)
 # Gemini: 300-400 tokens (needs more tokens to complete responses)
+# Detailed commits: 400-800 tokens (depending on complexity)
 ```
 
 ## API Reference

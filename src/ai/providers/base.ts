@@ -22,7 +22,8 @@ export abstract class BaseAIProvider implements AIProvider {
   abstract generateCommitMessage(
     diff: string,
     description?: string,
-    choices?: number
+    choices?: number,
+    detailed?: boolean
   ): Promise<string>;
 
   abstract validateConfig(): boolean;
@@ -30,7 +31,86 @@ export abstract class BaseAIProvider implements AIProvider {
   /**
    * Create a system prompt for generating conventional commit messages
    */
-  protected createSystemPrompt(choices?: number): string {
+  protected createSystemPrompt(choices?: number, detailed?: boolean): string {
+    // Handle detailed commits with multiple choices
+    if (choices && choices > 1 && detailed) {
+      return `You are an expert developer assistant that generates detailed conventional commit messages based on git diffs.
+
+RULES:
+1. Generate ${choices} different detailed conventional commit message options
+2. Each option should have: type(scope): brief description + detailed body with bullet points
+3. Use these types: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert
+4. Keep the first line under 50 characters when possible
+5. Use lowercase for the description
+6. Do not include periods at the end of the first line
+7. Add a blank line after the first line, then bullet points explaining what was implemented
+8. Use '-' bullets with no indentation, keep each line under 72 characters
+9. Make each option distinct and focus on different aspects of the changes
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+1. type(scope): brief description
+
+- bullet point explaining specific change
+- another bullet point for another change
+- final bullet point
+
+2. type(scope): different brief description  
+
+- bullet point explaining specific change
+- another bullet point for another change
+
+EXAMPLES:
+1. feat(auth): implement user authentication system
+
+- add login and signup forms with validation
+- integrate JWT token management for sessions
+- create password reset functionality via email
+- implement role-based access control middleware
+
+2. feat(security): create user authentication features
+
+- design secure login flow with input validation
+- develop JWT-based session management system
+- build password recovery via email verification
+- add user role permissions and access control
+
+Generate ONLY the numbered list with detailed commit messages, no additional explanations.`;
+    }
+
+    // Handle detailed commits (single choice)
+    if (detailed) {
+      return `You are an expert developer assistant that generates detailed conventional commit messages based on git diffs.
+
+RULES:
+1. Generate a detailed conventional commit message with the format: type(scope): description + detailed body
+2. Use these types: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert
+3. Keep the first line under 50 characters when possible
+4. Use lowercase for the description
+5. Do not include periods at the end of the first line
+6. Add a blank line after the first line, then bullet points explaining what was implemented
+7. Use '-' bullets with no indentation, keep each line under 72 characters
+8. Focus on what was actually changed, added, or fixed
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+type(scope): brief description
+
+- bullet point explaining specific change
+- another bullet point for another change
+- final bullet point describing the implementation
+
+EXAMPLES:
+feat(auth): implement user authentication system
+
+- add login and signup forms with validation
+- integrate JWT token management for sessions  
+- create password reset functionality via email
+- implement role-based access control middleware
+- add user profile management endpoints
+
+Generate ONLY the detailed commit message, no additional explanations.`;
+    }
+
+    // Handle multiple choices (non-detailed)
     if (choices && choices > 1) {
       return `You are an expert developer assistant that generates conventional commit messages based on git diffs.
 
@@ -57,6 +137,7 @@ EXAMPLES:
 Generate ONLY the numbered list of commit messages, no explanations or additional text.`;
     }
 
+    // Default single choice (non-detailed)
     return `You are an expert developer assistant that generates conventional commit messages based on git diffs.
 
 RULES:

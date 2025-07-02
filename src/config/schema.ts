@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const ConfigSchema = z.object({
   provider: z.enum(['openai', 'anthropic', 'gemini']).default('openai'),
   model: z.string().optional(),
-  maxTokens: z.number().min(1).max(4000).default(150),
+  maxTokens: z.number().min(1).max(8000).default(150),
   temperature: z.number().min(0).max(2).default(0.3),
   excludePatterns: z.array(z.string()).default([]),
   defaultDescription: z.string().optional(),

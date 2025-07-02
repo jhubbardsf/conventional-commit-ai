@@ -18,7 +18,8 @@ export class GeminiProvider extends BaseAIProvider {
   async generateCommitMessage(
     diff: string,
     description?: string,
-    choices?: number
+    choices?: number,
+    detailed?: boolean
   ): Promise<string> {
     try {
       const model = this.client.getGenerativeModel({
@@ -29,14 +30,14 @@ export class GeminiProvider extends BaseAIProvider {
         },
       });
 
-      const prompt = `${this.createSystemPrompt(choices)}\n\n${this.createUserPrompt(
+      const prompt = `${this.createSystemPrompt(choices, detailed)}\n\n${this.createUserPrompt(
         diff,
         description
       )}`;
-      console.log(prompt);
+
       const result = await model.generateContent(prompt);
-      console.log(JSON.stringify(result, null, 2));
       const response = result.response;
+      console.log(JSON.stringify(response, null, 2));
 
       if (!response) {
         throw new Error('Gemini returned no response');
@@ -82,15 +83,14 @@ export class GeminiProvider extends BaseAIProvider {
         );
       }
 
-      // If multiple choices requested, parse them and return as formatted string
-      if (choices && choices > 1) {
-        const parsedChoices = this.parseMultipleChoices(text);
-        return parsedChoices
-          .map((choice, index) => `${index + 1}. ${choice}`)
-          .join('\n');
+      // Handle detailed commits or multiple choices
+      if (detailed || (choices && choices > 1)) {
+        // For detailed commits, return the full response as-is
+        // For multiple choices, also return full response (contains numbered options)
+        return text.trim();
       }
 
-      // Single choice - use original post-processing
+      // Single choice, non-detailed - use original post-processing
       return this.postProcessMessage(text);
     } catch (error) {
       if (error instanceof Error) {

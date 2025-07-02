@@ -20,7 +20,8 @@ export class OpenAIProvider extends BaseAIProvider {
   async generateCommitMessage(
     diff: string,
     description?: string,
-    choices?: number
+    choices?: number,
+    detailed?: boolean
   ): Promise<string> {
     try {
       const response = await this.client.chat.completions.create({
@@ -28,7 +29,7 @@ export class OpenAIProvider extends BaseAIProvider {
         messages: [
           {
             role: 'system',
-            content: this.createSystemPrompt(choices),
+            content: this.createSystemPrompt(choices, detailed),
           },
           {
             role: 'user',
@@ -47,15 +48,14 @@ export class OpenAIProvider extends BaseAIProvider {
         throw new Error('OpenAI returned empty response');
       }
 
-      // If multiple choices requested, parse them and return as formatted string
-      if (choices && choices > 1) {
-        const parsedChoices = this.parseMultipleChoices(message);
-        return parsedChoices
-          .map((choice, index) => `${index + 1}. ${choice}`)
-          .join('\n');
+      // Handle detailed commits or multiple choices
+      if (detailed || (choices && choices > 1)) {
+        // For detailed commits, return the full response as-is
+        // For multiple choices, also return full response (contains numbered options)
+        return message.trim();
       }
 
-      // Single choice - use original post-processing
+      // Single choice, non-detailed - use original post-processing
       return this.postProcessMessage(message);
     } catch (error) {
       if (error instanceof Error) {

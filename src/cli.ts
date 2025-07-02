@@ -42,8 +42,8 @@ program
     'Maximum tokens for AI response (overrides config)',
     (value) => {
       const parsed = parseInt(value, 10);
-      if (isNaN(parsed) || parsed < 1 || parsed > 4000) {
-        throw new Error('max-tokens must be a number between 1 and 4000');
+      if (isNaN(parsed) || parsed < 1 || parsed > 8000) {
+        throw new Error('max-tokens must be a number between 1 and 8000');
       }
       return parsed;
     }
@@ -58,6 +58,10 @@ program
       }
       return parsed;
     }
+  )
+  .option(
+    '--detailed',
+    'Generate detailed commit messages with bullet-point explanations'
   )
   .option('--dry-run', 'Generate commit message without actually committing')
   .option('-v, --verbose', 'Show detailed progress information')
@@ -181,7 +185,8 @@ async function runCLI(options: CLIOptions): Promise<void> {
     commitMessage = await aiProvider.generateCommitMessage(
       diffResult.diff,
       options.description || config.defaultDescription,
-      options.choices
+      options.choices,
+      options.detailed
     );
     logger.progressDone(
       options.choices && options.choices > 1
@@ -198,14 +203,8 @@ async function runCLI(options: CLIOptions): Promise<void> {
   let allChoices: string[] = [];
 
   if (options.choices && options.choices > 1) {
-    // Parse the numbered choices from the response
-    allChoices = commitMessage
-      .split('\n')
-      .map((line) => {
-        const match = line.match(/^\d+\.\s*(.+)$/);
-        return match ? match[1] : '';
-      })
-      .filter((choice): choice is string => choice.length > 0);
+    // Parse the numbered choices from the response (handling multi-line for detailed commits)
+    allChoices = parseMultipleChoices(commitMessage, options.detailed);
 
     if (allChoices.length === 0) {
       throw new Error('Failed to parse multiple choices from AI response');
@@ -297,6 +296,62 @@ async function runCLI(options: CLIOptions): Promise<void> {
 }
 
 /**
+ * Parse multiple choices from AI response, handling multi-line content for detailed commits
+ */
+function parseMultipleChoices(response: string, detailed?: boolean): string[] {
+  if (!detailed) {
+    // For non-detailed commits, use simple line-by-line parsing
+    return response
+      .split('\n')
+      .map((line) => {
+        const match = line.match(/^\d+\.\s*(.+)$/);
+        return match && match[1] ? match[1] : '';
+      })
+      .filter((choice): choice is string => choice.length > 0);
+  }
+
+  // For detailed commits, we need to parse multi-line choices
+  const choices: string[] = [];
+  const lines = response.split('\n');
+  let currentChoice = '';
+  let inChoice = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) {
+      continue; // Skip undefined lines
+    }
+
+    const trimmedLine = line.trim();
+
+    // Check if this line starts a new choice (e.g., "1. feat(auth): ...")
+    const choiceMatch = trimmedLine.match(/^\d+\.\s*(.+)$/);
+    if (choiceMatch && choiceMatch[1]) {
+      // Save previous choice if we have one
+      if (inChoice && currentChoice.trim()) {
+        choices.push(currentChoice.trim());
+      }
+
+      // Start new choice
+      currentChoice = choiceMatch[1];
+      inChoice = true;
+    } else if (inChoice && trimmedLine !== '') {
+      // Continue building current choice (bullet points, empty lines, etc.)
+      if (currentChoice) {
+        currentChoice += '\n' + line;
+      }
+    }
+  }
+
+  // Don't forget the last choice
+  if (inChoice && currentChoice.trim()) {
+    choices.push(currentChoice.trim());
+  }
+
+  return choices;
+}
+
+/**
  * Interactive selection of commit message from multiple options
  */
 async function selectCommitMessage(
@@ -304,7 +359,7 @@ async function selectCommitMessage(
   quiet: boolean = false
 ): Promise<string> {
   if (choices.length === 1) {
-    return choices[0];
+    return choices[0] || '';
   }
 
   return new Promise((resolve) => {
@@ -332,7 +387,7 @@ async function selectCommitMessage(
         }
 
         const selectedChoice = choices[choice - 1];
-        if (selectedChoice !== undefined) {
+        if (selectedChoice) {
           rl.close();
           resolve(selectedChoice);
         } else {

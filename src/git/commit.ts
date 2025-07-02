@@ -93,23 +93,79 @@ export function validateConventionalCommit(message: string): {
  */
 export function formatCommitMessage(message: string): string {
   // Remove excessive whitespace and ensure proper formatting
-  const lines = message
-    .trim()
-    .split('\n')
-    .map((line) => line.trim());
+  const lines = message.trim().split('\n');
 
-  // Remove empty lines at the beginning and end
-  while (lines.length > 0 && lines[0] === '') {
-    lines.shift();
-  }
-  while (lines.length > 0 && lines[lines.length - 1] === '') {
-    lines.pop();
-  }
+  // Check if this is a detailed commit (has bullets after the first line)
+  const isDetailedCommit = lines.some(
+    (line, index) => index > 0 && line.trim().startsWith('-')
+  );
 
-  // Ensure the first line doesn't end with a period
-  if (lines.length > 0 && lines[0] && lines[0].endsWith('.')) {
-    lines[0] = lines[0].slice(0, -1);
-  }
+  if (isDetailedCommit) {
+    // For detailed commits, preserve structure but clean up lines
+    const cleanedLines = lines.map((line) => line.trimEnd());
 
-  return lines.join('\n');
+    // Remove empty lines at the beginning and end only
+    while (
+      cleanedLines.length > 0 &&
+      cleanedLines[0] &&
+      cleanedLines[0].trim() === ''
+    ) {
+      cleanedLines.shift();
+    }
+    while (
+      cleanedLines.length > 0 &&
+      cleanedLines[cleanedLines.length - 1] &&
+      cleanedLines[cleanedLines.length - 1]!.trim() === ''
+    ) {
+      cleanedLines.pop();
+    }
+
+    // Ensure there's a blank line between header and bullets if not present
+    if (
+      cleanedLines.length >= 2 &&
+      cleanedLines[0] &&
+      cleanedLines[0].trim() !== '' &&
+      cleanedLines[1] &&
+      cleanedLines[1].trim().startsWith('-') &&
+      cleanedLines[1].trim() !== ''
+    ) {
+      cleanedLines.splice(1, 0, '');
+    }
+
+    // Ensure the first line doesn't end with a period
+    if (
+      cleanedLines.length > 0 &&
+      cleanedLines[0] &&
+      cleanedLines[0].endsWith('.')
+    ) {
+      cleanedLines[0] = cleanedLines[0].slice(0, -1);
+    }
+
+    return cleanedLines.join('\n');
+  } else {
+    // For simple commits, use original logic
+    const cleanedLines = lines.map((line) => line.trim());
+
+    // Remove empty lines at the beginning and end
+    while (cleanedLines.length > 0 && cleanedLines[0] === '') {
+      cleanedLines.shift();
+    }
+    while (
+      cleanedLines.length > 0 &&
+      cleanedLines[cleanedLines.length - 1] === ''
+    ) {
+      cleanedLines.pop();
+    }
+
+    // Ensure the first line doesn't end with a period
+    if (
+      cleanedLines.length > 0 &&
+      cleanedLines[0] &&
+      cleanedLines[0].endsWith('.')
+    ) {
+      cleanedLines[0] = cleanedLines[0].slice(0, -1);
+    }
+
+    return cleanedLines.join('\n');
+  }
 }
