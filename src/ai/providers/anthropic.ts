@@ -19,20 +19,30 @@ export class AnthropicProvider extends BaseAIProvider {
 
   async generateCommitMessage(
     diff: string,
-    description?: string
+    description?: string,
+    choices?: number
   ): Promise<string> {
     try {
       const completion = await this.client.completions.create({
         model: this.model,
         max_tokens_to_sample: this.maxTokens,
         temperature: this.temperature,
-        prompt: `${this.createSystemPrompt()}\n\nHuman: ${this.createUserPrompt(diff, description)}\n\nAssistant:`,
+        prompt: `${this.createSystemPrompt(choices)}\n\nHuman: ${this.createUserPrompt(diff, description)}\n\nAssistant:`,
       });
 
       if (!completion.completion) {
         throw new Error('Anthropic returned empty response');
       }
 
+      // If multiple choices requested, parse them and return as formatted string
+      if (choices && choices > 1) {
+        const parsedChoices = this.parseMultipleChoices(completion.completion);
+        return parsedChoices
+          .map((choice, index) => `${index + 1}. ${choice}`)
+          .join('\n');
+      }
+
+      // Single choice - use original post-processing
       return this.postProcessMessage(completion.completion);
     } catch (error) {
       if (error instanceof Error) {

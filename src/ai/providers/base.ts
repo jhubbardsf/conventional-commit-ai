@@ -21,7 +21,8 @@ export abstract class BaseAIProvider implements AIProvider {
 
   abstract generateCommitMessage(
     diff: string,
-    description?: string
+    description?: string,
+    choices?: number
   ): Promise<string>;
 
   abstract validateConfig(): boolean;
@@ -29,7 +30,33 @@ export abstract class BaseAIProvider implements AIProvider {
   /**
    * Create a system prompt for generating conventional commit messages
    */
-  protected createSystemPrompt(): string {
+  protected createSystemPrompt(choices?: number): string {
+    if (choices && choices > 1) {
+      return `You are an expert developer assistant that generates conventional commit messages based on git diffs.
+
+RULES:
+1. Generate ${choices} different conventional commit message options following the format: type(scope): description
+2. Use these types: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert
+3. Keep each first line under 50 characters when possible
+4. The description should be concise and descriptive
+5. Use lowercase for the description
+6. Do not include periods at the end of the first line
+7. If multiple types of changes are present, choose the most significant one
+8. Make each option distinct and focus on different aspects of the changes
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+1. [first commit message]
+2. [second commit message]
+3. [third commit message]
+
+EXAMPLES:
+1. feat(auth): add user authentication system
+2. feat(security): implement login and signup flows
+3. feat(backend): create user management endpoints
+
+Generate ONLY the numbered list of commit messages, no explanations or additional text.`;
+    }
+
     return `You are an expert developer assistant that generates conventional commit messages based on git diffs.
 
 RULES:
@@ -94,5 +121,34 @@ Generate ONLY the commit message, no explanations or additional text.`;
 
     // Ensure it doesn't end with a period
     return firstLine.endsWith('.') ? firstLine.slice(0, -1) : firstLine;
+  }
+
+  /**
+   * Parse multiple commit message choices from AI response
+   */
+  protected parseMultipleChoices(response: string): string[] {
+    const lines = response.trim().split('\n');
+    const choices: string[] = [];
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      // Match numbered list format: "1. commit message" or "1) commit message"
+      const match = trimmedLine.match(/^\d+[.)]\s*(.+)$/);
+      if (match && match[1]) {
+        const message = match[1].trim();
+        // Clean up the message (remove periods, etc.)
+        const cleanedMessage = message.endsWith('.')
+          ? message.slice(0, -1)
+          : message;
+        choices.push(cleanedMessage);
+      }
+    }
+
+    if (choices.length === 0) {
+      // Fallback: if parsing fails, use the original post-processing
+      return [this.postProcessMessage(response)];
+    }
+
+    return choices;
   }
 }

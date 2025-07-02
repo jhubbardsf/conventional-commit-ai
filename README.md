@@ -120,19 +120,20 @@ aic-commit --config ./my-config.json
 
 ### CLI Options
 
-| Option                        | Description                              |
-| ----------------------------- | ---------------------------------------- |
-| `-d, --description <text>`    | Additional context for the AI            |
-| `-x, --exclude <patterns...>` | File patterns to exclude (glob patterns) |
-| `--config <path>`             | Path to custom configuration file        |
-| `--model <model>`             | AI model to use (overrides config)       |
-| `--provider <provider>`       | AI provider: openai, anthropic, gemini   |
-| `--max-tokens <number>`       | Maximum tokens for AI response (1-4000)  |
-| `--dry-run`                   | Generate message without committing      |
-| `-v, --verbose`               | Show detailed progress information       |
-| `--debug`                     | Show debug information                   |
-| `-q, --quiet`                 | Suppress all output except errors        |
-| `--json`                      | Output results in JSON format            |
+| Option                        | Description                                    |
+| ----------------------------- | ---------------------------------------------- |
+| `-d, --description <text>`    | Additional context for the AI                  |
+| `-x, --exclude <patterns...>` | File patterns to exclude (glob patterns)       |
+| `--config <path>`             | Path to custom configuration file              |
+| `--model <model>`             | AI model to use (overrides config)             |
+| `--provider <provider>`       | AI provider: openai, anthropic, gemini         |
+| `--max-tokens <number>`       | Maximum tokens for AI response (1-4000)        |
+| `--choices <number>`          | Generate multiple options to choose from (2-5) |
+| `--dry-run`                   | Generate message without committing            |
+| `-v, --verbose`               | Show detailed progress information             |
+| `--debug`                     | Show debug information                         |
+| `-q, --quiet`                 | Suppress all output except errors              |
+| `--json`                      | Output results in JSON format                  |
 
 ## Configuration
 
@@ -318,6 +319,43 @@ aic-commit --provider gemini --max-tokens 300
 
 # Use latest Gemini 2.5 models with adequate tokens
 aic-commit --provider gemini --model gemini-2.5-pro --max-tokens 400
+```
+
+### Multiple Choice Options
+
+Generate multiple commit message options and choose the best one:
+
+```bash
+# Generate 3 options to choose from
+aic-commit --choices 3
+
+# Combine with other options
+aic-commit --choices 3 --provider anthropic --description "Auth system"
+
+# View all options without committing
+aic-commit --choices 3 --dry-run
+```
+
+**Interactive Selection Example:**
+
+```
+✅ Changes analyzed
+✅ Commit message options generated
+
+Choose your commit message:
+1. feat(auth): add user authentication system
+2. feat(security): implement login and signup flows
+3. feat(backend): create user management endpoints
+
+Select option (1-3): 2
+
+✅ Commit created successfully
+```
+
+**JSON Output with Multiple Choices:**
+
+```bash
+aic-commit --choices 3 --dry-run --json
 ```
 
 ### Troubleshooting Token Limits

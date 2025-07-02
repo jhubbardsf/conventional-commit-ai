@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import * as readline from 'readline';
 import { loadConfig, validateApiKey } from './config/index.js';
 import { createAIProvider, validateProviderConfig } from './ai/index.js';
 import { getStagedDiff, validateRepository } from './git/diff.js';
@@ -43,6 +44,17 @@ program
       const parsed = parseInt(value, 10);
       if (isNaN(parsed) || parsed < 1 || parsed > 4000) {
         throw new Error('max-tokens must be a number between 1 and 4000');
+      }
+      return parsed;
+    }
+  )
+  .option(
+    '--choices <number>',
+    'Generate multiple commit message options to choose from (2-5)',
+    (value) => {
+      const parsed = parseInt(value, 10);
+      if (isNaN(parsed) || parsed < 2 || parsed > 5) {
+        throw new Error('choices must be a number between 2 and 5');
       }
       return parsed;
     }
@@ -157,22 +169,66 @@ async function runCLI(options: CLIOptions): Promise<void> {
   const aiProvider = createAIProvider(config);
   logger.progressDone(`${config.provider} provider initialized`);
 
-  // Generate commit message
-  logger.progress('Generating commit message');
+  // Generate commit message(s)
+  const progressMessage =
+    options.choices && options.choices > 1
+      ? 'Generating commit message options'
+      : 'Generating commit message';
+  logger.progress(progressMessage);
+
   let commitMessage;
   try {
     commitMessage = await aiProvider.generateCommitMessage(
       diffResult.diff,
-      options.description || config.defaultDescription
+      options.description || config.defaultDescription,
+      options.choices
     );
-    logger.progressDone('Commit message generated');
+    logger.progressDone(
+      options.choices && options.choices > 1
+        ? 'Commit message options generated'
+        : 'Commit message generated'
+    );
   } catch (error) {
     logger.progressFailed('Commit message generation failed');
     throw error;
   }
 
-  // Format and validate the commit message
-  const formattedMessage = formatCommitMessage(commitMessage);
+  // Handle multiple choices
+  let selectedMessage = commitMessage;
+  let allChoices: string[] = [];
+
+  if (options.choices && options.choices > 1) {
+    // Parse the numbered choices from the response
+    allChoices = commitMessage
+      .split('\n')
+      .map((line) => {
+        const match = line.match(/^\d+\.\s*(.+)$/);
+        return match ? match[1] : '';
+      })
+      .filter((choice): choice is string => choice.length > 0);
+
+    if (allChoices.length === 0) {
+      throw new Error('Failed to parse multiple choices from AI response');
+    }
+
+    // In dry-run or JSON mode, just show all options
+    if (options.dryRun || options.json) {
+      selectedMessage = commitMessage; // Keep the formatted list
+    } else {
+      // Interactive selection
+      selectedMessage = await selectCommitMessage(allChoices, options.quiet);
+    }
+  }
+
+  // Format and validate the selected message
+  const messageToValidate =
+    options.choices && options.choices > 1 && !options.dryRun && !options.json
+      ? selectedMessage
+      : allChoices.length > 0
+        ? allChoices[0]
+        : selectedMessage;
+
+  const formattedMessage = formatCommitMessage(messageToValidate);
   const messageValidation = validateConventionalCommit(formattedMessage);
 
   if (!messageValidation.valid) {
@@ -217,6 +273,53 @@ async function runCLI(options: CLIOptions): Promise<void> {
   }
 
   logger.verbose('AI conventional commit generator completed successfully');
+}
+
+/**
+ * Interactive selection of commit message from multiple options
+ */
+async function selectCommitMessage(
+  choices: string[],
+  quiet: boolean = false
+): Promise<string> {
+  if (choices.length === 1) {
+    return choices[0];
+  }
+
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    if (!quiet) {
+      console.log('\nChoose your commit message:');
+      choices.forEach((choice, index) => {
+        console.log(`${index + 1}. ${choice}`);
+      });
+      console.log('');
+    }
+
+    const askForChoice = (): void => {
+      rl.question(`Select option (1-${choices.length}): `, (answer) => {
+        const choice = parseInt(answer, 10);
+
+        if (isNaN(choice) || choice < 1 || choice > choices.length) {
+          console.log(`Please enter a number between 1 and ${choices.length}`);
+          askForChoice();
+          return;
+        }
+
+        const selectedChoice = choices[choice - 1];
+        if (selectedChoice) {
+          rl.close();
+          resolve(selectedChoice);
+        }
+      });
+    };
+
+    askForChoice();
+  });
 }
 
 // Handle uncaught exceptions

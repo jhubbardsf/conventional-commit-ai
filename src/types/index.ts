@@ -1,6 +1,10 @@
 export interface AIProvider {
   name: string;
-  generateCommitMessage(diff: string, description?: string): Promise<string>;
+  generateCommitMessage(
+    diff: string,
+    description?: string,
+    choices?: number
+  ): Promise<string>;
   validateConfig(): boolean;
 }
 
@@ -25,6 +29,7 @@ export interface CLIOptions {
   model?: string;
   provider?: 'openai' | 'anthropic' | 'gemini';
   maxTokens?: number;
+  choices?: number;
   dryRun?: boolean;
   verbose?: boolean;
   debug?: boolean;

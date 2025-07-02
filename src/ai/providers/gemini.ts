@@ -17,7 +17,8 @@ export class GeminiProvider extends BaseAIProvider {
 
   async generateCommitMessage(
     diff: string,
-    description?: string
+    description?: string,
+    choices?: number
   ): Promise<string> {
     try {
       const model = this.client.getGenerativeModel({
@@ -28,13 +29,12 @@ export class GeminiProvider extends BaseAIProvider {
         },
       });
 
-      const prompt = `${this.createSystemPrompt()}\n\n${this.createUserPrompt(
+      const prompt = `${this.createSystemPrompt(choices)}\n\n${this.createUserPrompt(
         diff,
         description
       )}`;
-      console.log(prompt);
+
       const result = await model.generateContent(prompt);
-      console.log(result);
       const response = result.response;
 
       if (!response) {
@@ -81,6 +81,15 @@ export class GeminiProvider extends BaseAIProvider {
         );
       }
 
+      // If multiple choices requested, parse them and return as formatted string
+      if (choices && choices > 1) {
+        const parsedChoices = this.parseMultipleChoices(text);
+        return parsedChoices
+          .map((choice, index) => `${index + 1}. ${choice}`)
+          .join('\n');
+      }
+
+      // Single choice - use original post-processing
       return this.postProcessMessage(text);
     } catch (error) {
       if (error instanceof Error) {
