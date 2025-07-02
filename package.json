@@ -1,12 +1,53 @@
 {
   "name": "ai-conventional-commit",
-  "module": "index.ts",
+  "version": "1.0.0",
+  "description": "AI-powered conventional commit message generator",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
   "type": "module",
-  "private": true,
+  "bin": {
+    "aic-commit": "./dist/cli.js",
+    "ai-conventional-commit": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "bun build src/cli.ts --outdir dist --target bun --format esm",
+    "dev": "bun run src/cli.ts",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "conventional-commits",
+    "ai",
+    "cli",
+    "openai",
+    "anthropic",
+    "gemini"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.1.0",
+    "simple-git": "^3.20.0",
+    "openai": "^4.24.1",
+    "@anthropic-ai/sdk": "^0.13.1",
+    "@google/generative-ai": "^0.2.1",
+    "cosmiconfig": "^9.0.0",
+    "minimatch": "^9.0.3",
+    "zod": "^3.22.4",
+    "picocolors": "^1.0.0"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/minimatch": "^5.1.2"
   },
   "peerDependencies": {
     "typescript": "^5"
-  }
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ]
 }

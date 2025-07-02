@@ -1,0 +1,35 @@
+{
+    "provider": "openai",
+    "model": "gpt-4",
+    "maxTokens": 150,
+    "temperature": 0.3,
+    "excludePatterns": [
+        "*.test.js",
+        "*.spec.ts",
+        "**/*.test.*",
+        "**/*.spec.*",
+        "__tests__/**",
+        "tests/**",
+        "test/**",
+        "*.md",
+        "docs/**",
+        "dist/**",
+        "build/**",
+        "node_modules/**",
+        ".git/**",
+        ".vscode/**",
+        ".idea/**",
+        "*.log",
+        "*.tmp",
+        ".env*",
+        "package-lock.json",
+        "yarn.lock",
+        "bun.lockb"
+    ],
+    "defaultDescription": "Code changes for project development",
+    "apiKeys": {
+        "openai": "sk-your-openai-key-here",
+        "anthropic": "sk-ant-your-anthropic-key-here",
+        "gemini": "your-gemini-key-here"
+    }
+}
