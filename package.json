@@ -10,10 +10,18 @@
     "ai-conventional-commit": "./dist/cli.js"
   },
   "scripts": {
-    "build": "bun build src/cli.ts --outdir dist --target bun --format esm",
+    "build": "bun build src/cli.ts --outdir dist --target node --format esm --minify --external commander --external simple-git --external openai --external @anthropic-ai/sdk --external @google/generative-ai --external cosmiconfig --external minimatch --external zod --external picocolors",
+    "build:bundle": "bun build src/cli.ts --outdir dist --target node --format esm --minify",
     "dev": "bun run src/cli.ts",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts",
     "test": "bun test",
-    "prepublishOnly": "bun run build"
+    "type-check": "tsc --noEmit",
+    "validate": "bun run lint && bun run format:check && bun run type-check && bun run test",
+    "prepublishOnly": "bun run validate && bun run build",
+    "postbuild": "chmod +x dist/cli.js"
   },
   "keywords": [
     "git",
@@ -27,6 +35,18 @@
   ],
   "author": "",
   "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
   "dependencies": {
     "commander": "^11.1.0",
     "simple-git": "^3.20.0",
@@ -40,7 +60,13 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/minimatch": "^5.1.2"
+    "@types/minimatch": "^5.1.2",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.2.4"
   },
   "peerDependencies": {
     "typescript": "^5"

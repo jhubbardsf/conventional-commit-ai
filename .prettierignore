@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+bun.lockb
+
+# Build output
+dist/
+build/
+
+# Generated files
+*.min.js
+*.bundle.js
+
+# Config files that should keep their format
+.eslintrc.json
+
+# Documentation that might have specific formatting
+CHANGELOG.md
+
+# Package files
+package-lock.json
+yarn.lock

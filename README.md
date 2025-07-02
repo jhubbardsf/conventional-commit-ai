@@ -127,6 +127,7 @@ aic-commit --config ./my-config.json
 | `--config <path>`             | Path to custom configuration file        |
 | `--model <model>`             | AI model to use (overrides config)       |
 | `--provider <provider>`       | AI provider: openai, anthropic, gemini   |
+| `--max-tokens <number>`       | Maximum tokens for AI response (1-4000)  |
 | `--dry-run`                   | Generate message without committing      |
 | `-v, --verbose`               | Show detailed progress information       |
 | `--debug`                     | Show debug information                   |
@@ -159,15 +160,15 @@ Create a `.aiccommitrc.json` file in your project root or home directory:
 
 ```json
 {
-	"provider": "openai",
-	"model": "gpt-4",
-	"maxTokens": 150,
-	"temperature": 0.3,
-	"excludePatterns": ["*.test.js", "*.spec.ts", "docs/**", "*.md"],
-	"defaultDescription": "Code changes for feature development",
-	"apiKeys": {
-		"openai": "sk-your-key-here"
-	}
+  "provider": "openai",
+  "model": "gpt-4",
+  "maxTokens": 150,
+  "temperature": 0.3,
+  "excludePatterns": ["*.test.js", "*.spec.ts", "docs/**", "*.md"],
+  "defaultDescription": "Code changes for feature development",
+  "apiKeys": {
+    "openai": "sk-your-key-here"
+  }
 }
 ```
 
@@ -226,14 +227,21 @@ export AIC_MODEL=claude-3-sonnet-20240229
 ```bash
 export GEMINI_API_KEY="your-key-here"
 export AIC_PROVIDER=gemini
-export AIC_MODEL=gemini-pro
+export AIC_MODEL=gemini-1.5-flash
 ```
 
 **Available Models:**
 
-- `gemini-pro`
+- `gemini-2.5-pro` (latest, most capable)
+- `gemini-2.5-flash` (latest, fast)
+- `gemini-2.5-flash-preview-04-17`
+- `gemini-2.5-flash-lite-preview-06-17`
+- `gemini-2.0-flash-exp`
+- `gemini-2.0-flash-thinking-exp`
+- `gemini-1.5-flash` (stable, default)
+- `gemini-1.5-flash-latest`
 - `gemini-1.5-pro`
-- `gemini-1.5-flash`
+- `gemini-1.5-pro-latest`
 
 ## Examples
 
@@ -277,11 +285,11 @@ Output:
 
 ```json
 {
-	"message": "feat: add user authentication middleware",
-	"provider": "openai",
-	"model": "gpt-4",
-	"files": ["src/auth.js", "src/middleware.js"],
-	"dryRun": true
+  "message": "feat: add user authentication middleware",
+  "provider": "openai",
+  "model": "gpt-4",
+  "files": ["src/auth.js", "src/middleware.js"],
+  "dryRun": true
 }
 ```
 
@@ -304,6 +312,29 @@ aic-commit --provider anthropic --model claude-3-opus-20240229
 
 # Use Gemini
 aic-commit --provider gemini --model gemini-1.5-pro
+
+# Use Gemini with higher token limit (recommended for Gemini)
+aic-commit --provider gemini --max-tokens 300
+
+# Use latest Gemini 2.5 models with adequate tokens
+aic-commit --provider gemini --model gemini-2.5-pro --max-tokens 400
+```
+
+### Troubleshooting Token Limits
+
+If you encounter "MAX_TOKENS" errors, especially with Gemini:
+
+```bash
+# Increase token limit for better response completion
+aic-commit --max-tokens 300
+
+# For complex changes, use even higher limits
+aic-commit --max-tokens 500
+
+# Provider-specific recommendations:
+# OpenAI: 150-200 tokens (efficient)
+# Anthropic: 150-250 tokens (balanced)
+# Gemini: 300-400 tokens (needs more tokens to complete responses)
 ```
 
 ## API Reference
@@ -345,11 +376,18 @@ Common errors and solutions:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ai-conventional-commit.git
+git clone https://github.com/jhubbardsf/ai-conventional-commit.git
 cd ai-conventional-commit
 
 # Install dependencies
 bun install
+
+# Run linting and formatting
+bun run lint
+bun run format
+
+# Run tests
+bun test
 
 # Build the project
 bun run build
@@ -357,6 +395,26 @@ bun run build
 # Test locally
 ./dist/cli.js --help
 ```
+
+### Code Quality
+
+This project uses ESLint and Prettier for code quality and consistent formatting:
+
+```bash
+# Check for linting issues
+bun run lint
+
+# Auto-fix linting issues
+bun run lint:fix
+
+# Format code with Prettier
+bun run format
+
+# Check if code is properly formatted
+bun run format:check
+```
+
+The build process automatically runs linting and formatting checks before building to ensure code quality.
 
 ## License
 
