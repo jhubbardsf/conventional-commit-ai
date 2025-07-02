@@ -220,18 +220,30 @@ async function runCLI(options: CLIOptions): Promise<void> {
     }
   }
 
-  // Format and validate the selected message
-  const messageToValidate =
-    options.choices && options.choices > 1 && !options.dryRun && !options.json
-      ? selectedMessage
-      : allChoices.length > 0
-        ? allChoices[0]
-        : selectedMessage;
+  // Handle output based on mode
+  let displayMessage: string;
+  let messageForValidation: string;
 
-  const formattedMessage = formatCommitMessage(messageToValidate);
+  if (options.choices && options.choices > 1) {
+    if (options.dryRun || options.json) {
+      // In dry-run or JSON mode, show all options
+      displayMessage = selectedMessage; // This contains the full numbered list
+      messageForValidation = allChoices[0] || selectedMessage; // Validate the first option or fallback
+    } else {
+      // Interactive mode - user selected one option
+      displayMessage = selectedMessage;
+      messageForValidation = selectedMessage;
+    }
+  } else {
+    // Single choice mode
+    displayMessage = selectedMessage;
+    messageForValidation = selectedMessage;
+  }
+
+  const formattedMessage = formatCommitMessage(messageForValidation);
   const messageValidation = validateConventionalCommit(formattedMessage);
 
-  if (!messageValidation.valid) {
+  if (!messageValidation.valid && !options.dryRun) {
     logger.warn(
       `Generated message may not follow conventional commit format: ${messageValidation.error}`
     );
@@ -241,7 +253,10 @@ async function runCLI(options: CLIOptions): Promise<void> {
   // Output the result
   if (options.json) {
     const result = {
-      message: formattedMessage,
+      message:
+        options.choices && options.choices > 1
+          ? displayMessage
+          : formattedMessage,
       provider: config.provider,
       model: config.model,
       files: diffResult.files,
@@ -250,7 +265,13 @@ async function runCLI(options: CLIOptions): Promise<void> {
     console.log(JSON.stringify(result, null, 2));
   } else {
     logger.info('Generated commit message:');
-    console.log(`\n${formattedMessage}\n`);
+    if (options.choices && options.choices > 1 && options.dryRun) {
+      // Show all options in dry-run mode
+      console.log(`\n${displayMessage}\n`);
+    } else {
+      // Show single formatted message
+      console.log(`\n${formattedMessage}\n`);
+    }
 
     if (diffResult.files.length > 0) {
       logger.info(`Files to be committed: ${diffResult.files.join(', ')}`);
@@ -311,9 +332,12 @@ async function selectCommitMessage(
         }
 
         const selectedChoice = choices[choice - 1];
-        if (selectedChoice) {
+        if (selectedChoice !== undefined) {
           rl.close();
           resolve(selectedChoice);
+        } else {
+          console.log('Invalid selection. Please try again.');
+          askForChoice();
         }
       });
     };

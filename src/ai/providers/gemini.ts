@@ -33,8 +33,9 @@ export class GeminiProvider extends BaseAIProvider {
         diff,
         description
       )}`;
-
+      console.log(prompt);
       const result = await model.generateContent(prompt);
+      console.log(JSON.stringify(result, null, 2));
       const response = result.response;
 
       if (!response) {
