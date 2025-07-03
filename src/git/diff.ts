@@ -178,6 +178,35 @@ function normalizeWhitespace(line: string): string {
 }
 
 /**
+ * Filter diff content to only include specified files
+ */
+function filterDiffByFiles(diff: string, filesToInclude: string[]): string {
+  const lines = diff.split('\n');
+  const filteredLines: string[] = [];
+  let currentFile = '';
+  let includeCurrentFile = false;
+
+  for (const line of lines) {
+    // Check if this is a file header
+    if (line.startsWith('diff --git')) {
+      // Extract the file path from the diff header
+      const match = line.match(/diff --git a\/(.+) b\/(.+)/);
+      if (match && match[1]) {
+        currentFile = match[1]; // Use the 'a/' path (before changes)
+        includeCurrentFile = filesToInclude.includes(currentFile);
+      }
+    }
+
+    // Include the line if we're including the current file
+    if (includeCurrentFile) {
+      filteredLines.push(line);
+    }
+  }
+
+  return filteredLines.join('\n');
+}
+
+/**
  * Get staged files and their diff content
  */
 export async function getStagedDiff(
@@ -224,15 +253,18 @@ export async function getStagedDiff(
     }
 
     // Get diff for staged files with reduced context lines for token optimization
-    const diff = await git.diff([
+    // Get full staged diff to avoid issues with deleted files
+    const fullDiff = await git.diff([
       '--cached',
       '--no-color',
       '--unified=1', // Reduced from 3 to 1 for ~66% token reduction
-      ...filteredFiles,
     ]);
 
+    // Filter the diff to only include the files we want to process
+    const filteredDiff = filterDiffByFiles(fullDiff, filteredFiles);
+
     // Apply diff optimizations to reduce token usage
-    const optimizedDiff = optimizeDiff(diff);
+    const optimizedDiff = optimizeDiff(filteredDiff);
 
     return {
       files: filteredFiles,
