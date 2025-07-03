@@ -7,7 +7,15 @@ export async function createCommit(message: string): Promise<void> {
   const git = simpleGit();
 
   try {
-    await git.commit(message);
+    // Check if commit signing is enabled in git config
+    const signingEnabled = await git.raw(['config', '--get', 'commit.gpgsign']).catch(() => 'false');
+
+    if (signingEnabled.trim() === 'true') {
+      // Use -S flag to sign the commit, respecting git's signing configuration
+      await git.commit(message, undefined, { '-S': null });
+    } else {
+      await git.commit(message);
+    }
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to create commit: ${error.message}`);
