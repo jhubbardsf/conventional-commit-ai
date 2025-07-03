@@ -441,6 +441,69 @@ aic-commit --detailed --max-tokens 600
 # Detailed commits: 400-800 tokens (depending on complexity)
 ```
 
+## Troubleshooting
+
+### Commit Signing Issues
+
+If your commits show as "Unverified" on GitHub, this is likely due to commit signing configuration. The tool respects your git signing settings, but you may need to configure SSH signing properly.
+
+#### SSH Commit Signing Setup
+
+If you're using SSH keys for commit signing (recommended), ensure you have:
+
+1. **SSH signing enabled in git:**
+```bash
+git config --global commit.gpgsign true
+git config --global gpg.format ssh
+git config --global user.signingkey "ssh-ed25519 YOUR_SSH_PUBLIC_KEY"
+```
+
+2. **Configure allowed signers file:**
+```bash
+# Create the allowed signers file
+mkdir -p ~/.config/git
+echo "your-email@example.com ssh-ed25519 YOUR_SSH_PUBLIC_KEY" > ~/.config/git/allowed_signers
+
+# Tell git where to find it
+git config --global gpg.ssh.allowedSignersFile ~/.config/git/allowed_signers
+```
+
+3. **Add your SSH key to GitHub:**
+   - Go to GitHub Settings → SSH and GPG keys
+   - Add your SSH public key as a "Signing Key" (not just authentication)
+
+#### GPG Commit Signing Setup
+
+If you prefer GPG signing:
+
+1. **Generate a GPG key:**
+```bash
+gpg --full-generate-key
+```
+
+2. **Configure git to use GPG:**
+```bash
+git config --global commit.gpgsign true
+git config --global user.signingkey YOUR_GPG_KEY_ID
+```
+
+3. **Add your GPG key to GitHub:**
+   - Export: `gpg --armor --export YOUR_GPG_KEY_ID`
+   - Add to GitHub Settings → SSH and GPG keys
+
+#### Verification
+
+Test that signing works:
+```bash
+# Make a test commit
+echo "test" > test.txt && git add test.txt && git commit -m "test: verify signing"
+
+# Check if it's signed
+git verify-commit HEAD
+```
+
+If you see "Good signature", your commits will show as "Verified" on GitHub.
+
 ## API Reference
 
 ### Command Line Interface
@@ -464,6 +527,7 @@ Common errors and solutions:
 | "Invalid API key"         | Check your API key format and validity   |
 | "Quota exceeded"          | Check your API billing/usage limits      |
 | "Model not found"         | Use a supported model name               |
+| "Unverified commits"      | Configure commit signing (see [Troubleshooting](#troubleshooting)) |
 
 ## Contributing
 
