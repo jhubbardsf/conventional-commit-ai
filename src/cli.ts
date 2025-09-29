@@ -370,9 +370,10 @@ async function selectCommitMessage(
 
     if (!quiet) {
       console.log('\nChoose your commit message:');
-      choices.forEach((choice, index) => {
-        console.log(`${index + 1}. ${choice}`);
-      });
+      const formattedChoices = choices.map(
+        (choice, index) => `${index + 1}. ${choice}`
+      );
+      console.log(formattedChoices.join('\n\n'));
       console.log('');
     }
 

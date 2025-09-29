@@ -34,10 +34,10 @@ export class GeminiProvider extends BaseAIProvider {
         diff,
         description
       )}`;
-      console.log(prompt);
+      // console.log(prompt);
       const result = await model.generateContent(prompt);
       const response = result.response;
-      console.log(JSON.stringify(response, null, 2));
+      // console.log(JSON.stringify(response, null, 2));
 
       if (!response) {
         throw new Error('Gemini returned no response');
@@ -132,37 +132,4 @@ export class GeminiProvider extends BaseAIProvider {
     return true;
   }
 
-  /**
-   * Get available models for Gemini
-   */
-  static getAvailableModels(): string[] {
-    return [
-      // Latest Gemini 2.5 models
-      'gemini-2.5-pro',
-      'gemini-2.5-flash',
-      'gemini-2.5-flash-preview-04-17',
-      'gemini-2.5-flash-lite-preview-06-17',
-
-      // Gemini 2.0 models
-      'gemini-2.0-flash-exp',
-      'gemini-2.0-flash-thinking-exp',
-
-      // Gemini 1.5 models
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro',
-      'gemini-1.5-pro-latest',
-
-      // Deprecated but still listed for compatibility
-      'gemini-pro',
-      'gemini-pro-latest',
-    ];
-  }
-
-  /**
-   * Validate if the model is supported
-   */
-  static isModelSupported(model: string): boolean {
-    return this.getAvailableModels().includes(model);
-  }
 }

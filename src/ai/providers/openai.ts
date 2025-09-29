@@ -91,25 +91,4 @@ export class OpenAIProvider extends BaseAIProvider {
     return true;
   }
 
-  /**
-   * Get available models for OpenAI
-   */
-  static getAvailableModels(): string[] {
-    return [
-      'gpt-4',
-      'gpt-4-turbo-preview',
-      'gpt-4-0125-preview',
-      'gpt-4-1106-preview',
-      'gpt-3.5-turbo',
-      'gpt-3.5-turbo-0125',
-      'gpt-3.5-turbo-1106',
-    ];
-  }
-
-  /**
-   * Validate if the model is supported
-   */
-  static isModelSupported(model: string): boolean {
-    return this.getAvailableModels().includes(model);
-  }
 }

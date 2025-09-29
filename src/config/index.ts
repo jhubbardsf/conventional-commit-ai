@@ -1,162 +1,226 @@
+// src/config/index.ts
 import { cosmiconfigSync } from 'cosmiconfig';
 import { validateConfig, getDefaultModel } from './schema.js';
 import type { ConfigType } from './schema.js';
 import type { CLIOptions } from '../types/index.js';
 import { getDefaultExclusions } from '../utils/patterns.js';
 
-const moduleName = 'aiccommit';
+const MODULE_NAME = 'aiccommit';
+
+// Constants for better maintainability and performance
+const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini'] as const;
+const ENV_VAR_MAPPING = {
+  provider: 'AIC_PROVIDER',
+  model: 'AIC_MODEL',
+  maxTokens: 'AIC_MAX_TOKENS',
+  temperature: 'AIC_TEMPERATURE',
+  defaultDescription: 'AIC_DEFAULT_DESCRIPTION',
+} as const;
+
+const API_KEY_ENV_MAPPING = {
+  openai: 'OPENAI_API_KEY',
+  anthropic: 'ANTHROPIC_API_KEY',
+  gemini: 'GEMINI_API_KEY',
+} as const;
 
 /**
- * Load configuration from various sources in priority order:
- * 1. CLI options
- * 2. Environment variables
- * 3. Config files (.aiccommit.json, .aiccommit.js, etc.)
- * 4. Default values
+ * Creates the default configuration object
+ * Extracted for better testability and reusability
  */
-export function loadConfig(cliOptions: CLIOptions = {}): ConfigType {
-  // Start with default configuration
-  let config: Partial<ConfigType> = {
+function createDefaultConfig(): Partial<ConfigType> {
+  return {
     provider: 'openai',
     maxTokens: 150,
     temperature: 0.3,
     excludePatterns: getDefaultExclusions(),
   };
+}
 
-  // Load from config file
-  const explorer = cosmiconfigSync(moduleName, {
+/**
+ * Loads configuration from config files using cosmiconfig
+ * Handles errors gracefully and provides better error context
+ */
+function loadConfigFile(configPath?: string): Partial<ConfigType> {
+  const explorer = cosmiconfigSync(MODULE_NAME, {
     searchPlaces: [
       'package.json',
-      `.${moduleName}rc`,
-      `.${moduleName}rc.json`,
-      `.${moduleName}rc.js`,
-      `.${moduleName}.config.js`,
-      `${moduleName}.config.js`,
+      `.${MODULE_NAME}rc`,
+      `.${MODULE_NAME}rc.json`,
+      `.${MODULE_NAME}rc.js`,
+      `.${MODULE_NAME}.config.js`,
+      `${MODULE_NAME}.config.js`,
     ],
   });
 
   try {
-    const result = explorer.search(cliOptions.config);
-    if (result && result.config) {
-      config = { ...config, ...result.config };
-    }
+    const result = explorer.search(configPath);
+    return result?.config || {};
   } catch (error) {
-    // Config file errors will be handled by validation
+    // Log warning but don't throw - let validation handle it
+    if (process.env.NODE_ENV !== 'test') {
+      console.warn(
+        `Warning: Failed to load config file: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+    return {};
   }
+}
 
-  // Load from environment variables
+/**
+ * Parses environment variables into config object
+ * More efficient than repeated process.env lookups
+ */
+function loadEnvironmentConfig(): Partial<ConfigType> {
   const envConfig: Partial<ConfigType> = {};
 
-  if (process.env.AIC_PROVIDER) {
-    const provider = process.env.AIC_PROVIDER.toLowerCase();
-    if (['openai', 'anthropic', 'gemini'].includes(provider)) {
-      envConfig.provider = provider as 'openai' | 'anthropic' | 'gemini';
+  // Parse provider with validation
+  const providerEnv = process.env[ENV_VAR_MAPPING.provider];
+  if (providerEnv) {
+    const provider = providerEnv.toLowerCase();
+    if (
+      VALID_PROVIDERS.includes(provider as (typeof VALID_PROVIDERS)[number])
+    ) {
+      envConfig.provider = provider as ConfigType['provider'];
     }
   }
 
-  if (process.env.AIC_MODEL) {
-    envConfig.model = process.env.AIC_MODEL;
+  // Parse model
+  const modelEnv = process.env[ENV_VAR_MAPPING.model];
+  if (modelEnv) {
+    envConfig.model = modelEnv;
   }
 
-  if (process.env.AIC_MAX_TOKENS) {
-    const maxTokens = parseInt(process.env.AIC_MAX_TOKENS, 10);
-    if (!isNaN(maxTokens)) {
+  // Parse numeric values with better error handling
+  const maxTokensEnv = process.env[ENV_VAR_MAPPING.maxTokens];
+  if (maxTokensEnv) {
+    const maxTokens = Number.parseInt(maxTokensEnv, 10);
+    if (Number.isFinite(maxTokens) && maxTokens > 0) {
       envConfig.maxTokens = maxTokens;
     }
   }
 
-  if (process.env.AIC_TEMPERATURE) {
-    const temperature = parseFloat(process.env.AIC_TEMPERATURE);
-    if (!isNaN(temperature)) {
+  const temperatureEnv = process.env[ENV_VAR_MAPPING.temperature];
+  if (temperatureEnv) {
+    const temperature = Number.parseFloat(temperatureEnv);
+    if (Number.isFinite(temperature) && temperature >= 0 && temperature <= 2) {
       envConfig.temperature = temperature;
     }
   }
 
-  if (process.env.AIC_DEFAULT_DESCRIPTION) {
-    envConfig.defaultDescription = process.env.AIC_DEFAULT_DESCRIPTION;
+  // Parse default description
+  const descriptionEnv = process.env[ENV_VAR_MAPPING.defaultDescription];
+  if (descriptionEnv) {
+    envConfig.defaultDescription = descriptionEnv;
   }
 
-  // Collect API keys from environment
+  // Collect API keys more efficiently
   const apiKeys: Record<string, string> = {};
-  if (process.env.OPENAI_API_KEY) {
-    apiKeys.openai = process.env.OPENAI_API_KEY;
+  for (const [provider, envVar] of Object.entries(API_KEY_ENV_MAPPING)) {
+    const key = process.env[envVar];
+    if (key) {
+      apiKeys[provider] = key;
+    }
   }
-  if (process.env.ANTHROPIC_API_KEY) {
-    apiKeys.anthropic = process.env.ANTHROPIC_API_KEY;
-  }
-  if (process.env.GEMINI_API_KEY) {
-    apiKeys.gemini = process.env.GEMINI_API_KEY;
-  }
+
   if (Object.keys(apiKeys).length > 0) {
     envConfig.apiKeys = apiKeys;
   }
 
-  // Merge environment config
-  config = { ...config, ...envConfig };
+  return envConfig;
+}
 
-  // Apply CLI options (highest priority)
+/**
+ * Applies CLI options to the configuration
+ * Handles exclude patterns merging more efficiently
+ */
+function applyCLIOptions(
+  config: Partial<ConfigType>,
+  cliOptions: CLIOptions
+): Partial<ConfigType> {
+  const updatedConfig = { ...config };
+
+  // Simple property mappings
   if (cliOptions.provider) {
-    config.provider = cliOptions.provider;
+    updatedConfig.provider = cliOptions.provider;
   }
   if (cliOptions.model) {
-    config.model = cliOptions.model;
+    updatedConfig.model = cliOptions.model;
   }
   if (cliOptions.maxTokens) {
-    config.maxTokens = cliOptions.maxTokens;
+    updatedConfig.maxTokens = cliOptions.maxTokens;
   }
   if (cliOptions.description) {
-    config.defaultDescription = cliOptions.description;
+    updatedConfig.defaultDescription = cliOptions.description;
   }
-  if (cliOptions.exclude && cliOptions.exclude.length > 0) {
-    config.excludePatterns = [
-      ...(config.excludePatterns || []),
+
+  // Handle exclude patterns efficiently
+  if (cliOptions.exclude?.length) {
+    updatedConfig.excludePatterns = [
+      ...(updatedConfig.excludePatterns || []),
       ...cliOptions.exclude,
     ];
   }
 
-  // Set default model if not specified
-  if (!config.model && config.provider) {
-    config.model = getDefaultModel(config.provider);
-  }
+  return updatedConfig;
+}
 
-  // Validate the final configuration
-  const validation = validateConfig(config);
-  if (!validation.success) {
-    throw new Error(validation.error);
-  }
+/**
+ * Load configuration from various sources in priority order:
+ * 1. CLI options (highest priority)
+ * 2. Environment variables
+ * 3. Config files (.aiccommit.json, .aiccommit.js, etc.)
+ * 4. Default values (lowest priority)
+ */
+export function loadConfig(cliOptions: CLIOptions = {}): ConfigType {
+  try {
+    // Build configuration in layers
+    let config = createDefaultConfig();
+    config = { ...config, ...loadConfigFile(cliOptions.config) };
+    config = { ...config, ...loadEnvironmentConfig() };
+    config = applyCLIOptions(config, cliOptions);
 
-  return validation.data;
+    // Set default model if not specified
+    if (!config.model && config.provider) {
+      config.model = getDefaultModel(config.provider);
+    }
+
+    // Validate the final configuration
+    const validation = validateConfig(config);
+    if (!validation.success) {
+      throw new Error(`Configuration validation failed: ${validation.error}`);
+    }
+
+    return validation.data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to load configuration: ${String(error)}`);
+  }
 }
 
 /**
  * Get API key for the specified provider
+ * Uses constants for better maintainability and type safety
  */
 export function getApiKey(
   config: ConfigType,
   provider: string
 ): string | undefined {
   // First check config file API keys
-  if (
-    config.apiKeys &&
-    config.apiKeys[provider as keyof typeof config.apiKeys]
-  ) {
+  if (config.apiKeys?.[provider as keyof typeof config.apiKeys]) {
     return config.apiKeys[provider as keyof typeof config.apiKeys];
   }
 
-  // Then check environment variables
-  switch (provider) {
-    case 'openai':
-      return process.env.OPENAI_API_KEY;
-    case 'anthropic':
-      return process.env.ANTHROPIC_API_KEY;
-    case 'gemini':
-      return process.env.GEMINI_API_KEY;
-    default:
-      return undefined;
-  }
+  // Then check environment variables using mapping
+  const envVar =
+    API_KEY_ENV_MAPPING[provider as keyof typeof API_KEY_ENV_MAPPING];
+  return envVar ? process.env[envVar] : undefined;
 }
 
 /**
  * Validate that required API key is available for the provider
+ * Uses constants for better maintainability
  */
 export function validateApiKey(config: ConfigType): {
   valid: boolean;
@@ -165,12 +229,7 @@ export function validateApiKey(config: ConfigType): {
   const apiKey = getApiKey(config, config.provider);
 
   if (!apiKey) {
-    const envVarName = {
-      openai: 'OPENAI_API_KEY',
-      anthropic: 'ANTHROPIC_API_KEY',
-      gemini: 'GEMINI_API_KEY',
-    }[config.provider];
-
+    const envVarName = API_KEY_ENV_MAPPING[config.provider];
     return {
       valid: false,
       error: `API key not found for ${config.provider}. Please set ${envVarName} environment variable or add it to your config file.`,

@@ -85,23 +85,4 @@ export class AnthropicProvider extends BaseAIProvider {
     return true;
   }
 
-  /**
-   * Get available models for Anthropic
-   */
-  static getAvailableModels(): string[] {
-    return [
-      'claude-3-opus-20240229',
-      'claude-3-sonnet-20240229',
-      'claude-3-haiku-20240307',
-      'claude-3-5-sonnet-20241022',
-      'claude-3-5-haiku-20241022',
-    ];
-  }
-
-  /**
-   * Validate if the model is supported
-   */
-  static isModelSupported(model: string): boolean {
-    return this.getAvailableModels().includes(model);
-  }
 }
