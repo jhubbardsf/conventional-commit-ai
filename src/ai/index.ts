@@ -45,37 +45,6 @@ export function createAIProvider(config: ConfigType): AIProvider {
   }
 }
 
-/**
- * Get available models for a provider
- */
-export function getAvailableModels(provider: string): string[] {
-  switch (provider) {
-    case 'openai':
-      return OpenAIProvider.getAvailableModels();
-    case 'anthropic':
-      return AnthropicProvider.getAvailableModels();
-    case 'gemini':
-      return GeminiProvider.getAvailableModels();
-    default:
-      return [];
-  }
-}
-
-/**
- * Check if a model is supported by a provider
- */
-export function isModelSupported(provider: string, model: string): boolean {
-  switch (provider) {
-    case 'openai':
-      return OpenAIProvider.isModelSupported(model);
-    case 'anthropic':
-      return AnthropicProvider.isModelSupported(model);
-    case 'gemini':
-      return GeminiProvider.isModelSupported(model);
-    default:
-      return false;
-  }
-}
 
 /**
  * Get all supported providers
@@ -101,16 +70,6 @@ export function validateProviderConfig(config: ConfigType): {
     };
   }
 
-  // Check if model is supported by the provider
-  if (config.model && !isModelSupported(config.provider, config.model)) {
-    const availableModels = getAvailableModels(config.provider);
-    return {
-      valid: false,
-      error: `Model '${config.model}' is not supported by ${
-        config.provider
-      }. Available models: ${availableModels.join(', ')}`,
-    };
-  }
 
   // Check API key availability
   const apiKey = getApiKey(config, config.provider);

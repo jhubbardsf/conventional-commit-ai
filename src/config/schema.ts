@@ -21,7 +21,7 @@ export type ConfigType = z.infer<typeof ConfigSchema>;
 export const DEFAULT_MODELS = {
   openai: 'gpt-4',
   anthropic: 'claude-3-sonnet-20240229',
-  gemini: 'gemini-1.5-flash',
+  gemini: 'gemini-2.5-flash-lite',
 } as const;
 
 export function getDefaultModel(
