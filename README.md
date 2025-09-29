@@ -16,14 +16,14 @@ AI-powered conventional commit message generator that analyzes your staged chang
 
 ## Features
 
-- 🤖 **AI-Powered**: Uses OpenAI, Anthropic, or Google Gemini to generate intelligent commit messages
-- 📝 **Conventional Commits**: Follows the conventional commit format automatically
-- 🎯 **Context-Aware**: Analyzes your actual code changes to generate relevant messages
-- 🔧 **Configurable**: Support for config files, environment variables, and CLI options
-- 🚫 **Smart Filtering**: Exclude files with glob patterns
-- 🔍 **Flexible**: Supports dry-run mode and custom descriptions
-- 📊 **Multiple Output Formats**: Human-readable or JSON output
-- ⚡ **Fast**: Built with Bun for optimal performance
+- **AI-Powered**: Uses OpenAI, Anthropic, or Google Gemini to generate intelligent commit messages
+- **Conventional Commits**: Follows the conventional commit format automatically
+- **Context-Aware**: Analyzes your actual code changes to generate relevant messages
+- **Configurable**: Support for config files, environment variables, and CLI options
+- **Smart Filtering**: Exclude files with glob patterns
+- **Flexible**: Supports dry-run mode and custom descriptions
+- **Multiple Output Formats**: Human-readable or JSON output
+- **Fast**: Built with Bun for optimal performance
 
 ## Installation
 
