@@ -199,51 +199,32 @@ Configuration is loaded in this order (highest to lowest priority):
 ```bash
 export OPENAI_API_KEY="sk-your-key-here"
 export AIC_PROVIDER=openai
-export AIC_MODEL=gpt-4  # or gpt-3.5-turbo
+export AIC_MODEL=gpt-4  # or gpt-3.5-turbo, gpt-4o, etc.
 ```
 
-**Available Models:**
-
-- `gpt-4` (recommended)
-- `gpt-4-turbo-preview`
-- `gpt-3.5-turbo`
-- `gpt-3.5-turbo-0125`
+**Available Models:** See [OpenAI Models Documentation](https://platform.openai.com/docs/models) for the current list of supported models.
 
 ### Anthropic Claude
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-your-key-here"
 export AIC_PROVIDER=anthropic
-export AIC_MODEL=claude-3-sonnet-20240229
+export AIC_MODEL=claude-3-5-sonnet-20241022  # or claude-3-haiku-20240307 for speed
 ```
 
-**Available Models:**
-
-- `claude-3-opus-20240229` (most capable)
-- `claude-3-sonnet-20240229` (balanced)
-- `claude-3-haiku-20240307` (fastest)
-- `claude-3-5-sonnet-20241022`
+**Available Models:** See [Anthropic Models Documentation](https://docs.anthropic.com/en/docs/models-overview) for the current list of supported Claude models.
 
 ### Google Gemini
 
 ```bash
 export GEMINI_API_KEY="your-key-here"
 export AIC_PROVIDER=gemini
-export AIC_MODEL=gemini-1.5-flash
+export AIC_MODEL=gemini-2.5-flash-lite  # fastest option
 ```
 
-**Available Models:**
+**Available Models:** See [Gemini Models Documentation](https://ai.google.dev/gemini-api/docs/models) for the current list of supported models.
 
-- `gemini-2.5-pro` (latest, most capable)
-- `gemini-2.5-flash` (latest, fast)
-- `gemini-2.5-flash-preview-04-17`
-- `gemini-2.5-flash-lite-preview-06-17`
-- `gemini-2.0-flash-exp`
-- `gemini-2.0-flash-thinking-exp`
-- `gemini-1.5-flash` (stable, default)
-- `gemini-1.5-flash-latest`
-- `gemini-1.5-pro`
-- `gemini-1.5-pro-latest`
+**Performance Tip:** For fastest commit generation, use `gemini-2.5-flash-lite` with 250-300 tokens.
 
 ## Examples
 
