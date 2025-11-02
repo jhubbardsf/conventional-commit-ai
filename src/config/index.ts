@@ -8,7 +8,7 @@ import { getDefaultExclusions } from '../utils/patterns.js';
 const MODULE_NAME = 'aiccommit';
 
 // Constants for better maintainability and performance
-const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini'] as const;
+const VALID_PROVIDERS = ['openai', 'anthropic', 'gemini', 'zai'] as const;
 const ENV_VAR_MAPPING = {
   provider: 'AIC_PROVIDER',
   model: 'AIC_MODEL',
@@ -21,6 +21,7 @@ const API_KEY_ENV_MAPPING = {
   openai: 'OPENAI_API_KEY',
   anthropic: 'ANTHROPIC_API_KEY',
   gemini: 'GEMINI_API_KEY',
+  zai: 'ZAI_API_KEY',
 } as const;
 
 /**

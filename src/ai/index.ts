@@ -4,6 +4,7 @@ import { getApiKey } from '../config/index.js';
 import { OpenAIProvider } from './providers/openai.js';
 import { AnthropicProvider } from './providers/anthropic.js';
 import { GeminiProvider } from './providers/gemini.js';
+import { ZAIProvider } from './providers/zai.js';
 
 /**
  * Create an AI provider instance based on configuration
@@ -40,6 +41,14 @@ export function createAIProvider(config: ConfigType): AIProvider {
         config.temperature
       );
 
+    case 'zai':
+      return new ZAIProvider(
+        apiKey,
+        config.model,
+        config.maxTokens,
+        config.temperature
+      );
+
     default:
       throw new Error(`Unsupported AI provider: ${config.provider}`);
   }
@@ -50,7 +59,7 @@ export function createAIProvider(config: ConfigType): AIProvider {
  * Get all supported providers
  */
 export function getSupportedProviders(): string[] {
-  return ['openai', 'anthropic', 'gemini'];
+  return ['openai', 'anthropic', 'gemini', 'zai'];
 }
 
 /**
@@ -78,6 +87,7 @@ export function validateProviderConfig(config: ConfigType): {
       openai: 'OPENAI_API_KEY',
       anthropic: 'ANTHROPIC_API_KEY',
       gemini: 'GEMINI_API_KEY',
+      zai: 'ZAI_API_KEY',
     }[config.provider];
 
     return {

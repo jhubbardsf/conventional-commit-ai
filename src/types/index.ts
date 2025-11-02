@@ -10,7 +10,7 @@ export interface AIProvider {
 }
 
 export interface Config {
-  provider: 'openai' | 'anthropic' | 'gemini';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'zai';
   model?: string;
   maxTokens?: number;
   temperature?: number;
@@ -20,6 +20,7 @@ export interface Config {
     openai?: string;
     anthropic?: string;
     gemini?: string;
+    zai?: string;
   };
 }
 
@@ -28,7 +29,7 @@ export interface CLIOptions {
   exclude?: string[];
   config?: string;
   model?: string;
-  provider?: 'openai' | 'anthropic' | 'gemini';
+  provider?: 'openai' | 'anthropic' | 'gemini' | 'zai';
   maxTokens?: number;
   choices?: number;
   detailed?: boolean;

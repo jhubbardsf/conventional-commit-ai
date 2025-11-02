@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const ConfigSchema = z.object({
-  provider: z.enum(['openai', 'anthropic', 'gemini']).default('openai'),
+  provider: z.enum(['openai', 'anthropic', 'gemini', 'zai']).default('openai'),
   model: z.string().optional(),
   maxTokens: z.number().min(1).max(8000).default(150),
   temperature: z.number().min(0).max(2).default(0.3),
@@ -12,6 +12,7 @@ export const ConfigSchema = z.object({
       openai: z.string().optional(),
       anthropic: z.string().optional(),
       gemini: z.string().optional(),
+      zai: z.string().optional(),
     })
     .optional(),
 });
@@ -22,10 +23,11 @@ export const DEFAULT_MODELS = {
   openai: 'gpt-4',
   anthropic: 'claude-3-sonnet-20240229',
   gemini: 'gemini-2.5-flash-lite',
+  zai: 'glm-4.6',
 } as const;
 
 export function getDefaultModel(
-  provider: 'openai' | 'anthropic' | 'gemini'
+  provider: 'openai' | 'anthropic' | 'gemini' | 'zai'
 ): string {
   return DEFAULT_MODELS[provider];
 }

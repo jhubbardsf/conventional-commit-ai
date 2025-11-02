@@ -3,7 +3,7 @@ import { BaseAIProvider } from './base.js';
 
 export class OpenAIProvider extends BaseAIProvider {
   name = 'openai';
-  private client: OpenAI;
+  protected client: OpenAI;
 
   constructor(
     apiKey: string,
