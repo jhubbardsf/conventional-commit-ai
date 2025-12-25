@@ -11,6 +11,7 @@ AI-powered conventional commit message generator that analyzes your staged chang
 - [Configuration](#configuration)
 - [AI Providers](#ai-providers)
 - [Examples](#examples)
+- [PR Description Generation](#pr-description-generation)
 - [API Reference](#api-reference)
 - [Contributing](#contributing)
 
@@ -18,6 +19,7 @@ AI-powered conventional commit message generator that analyzes your staged chang
 
 - **AI-Powered**: Uses OpenAI, Anthropic, or Google Gemini to generate intelligent commit messages
 - **Conventional Commits**: Follows the conventional commit format automatically
+- **PR Descriptions**: Generate comprehensive pull request descriptions from branch diffs
 - **Context-Aware**: Analyzes your actual code changes to generate relevant messages
 - **Configurable**: Support for config files, environment variables, and CLI options
 - **Smart Filtering**: Exclude files with glob patterns
@@ -421,6 +423,93 @@ aic-commit --detailed --max-tokens 600
 # Gemini: 300-400 tokens (needs more tokens to complete responses)
 # Detailed commits: 400-800 tokens (depending on complexity)
 ```
+
+## PR Description Generation
+
+Generate AI-powered pull request descriptions by comparing your current branch against a base branch.
+
+### Basic Usage
+
+```bash
+# Generate PR description (compares to dev by default)
+aic-commit pr
+
+# Compare to a different base branch
+aic-commit pr --base main
+
+# Add context for better descriptions
+aic-commit pr -d "This adds OAuth2 support for third-party integrations"
+
+# Print only (don't copy to clipboard)
+aic-commit pr --no-clipboard
+
+# JSON output for scripting
+aic-commit pr --json
+```
+
+### PR Subcommand Options
+
+| Option                        | Description                                     |
+| ----------------------------- | ----------------------------------------------- |
+| `-b, --base <branch>`         | Base branch to compare against (default: `dev`) |
+| `-d, --description <text>`    | Additional context for the AI                   |
+| `--no-clipboard`              | Do not copy to clipboard                        |
+| `-x, --exclude <patterns...>` | File patterns to exclude (glob patterns)        |
+| `--config <path>`             | Path to custom configuration file               |
+| `--model <model>`             | AI model to use (overrides config)              |
+| `--provider <provider>`       | AI provider: openai, anthropic, gemini, zai     |
+| `--max-tokens <number>`       | Maximum tokens for AI response (1-8000)         |
+| `-v, --verbose`               | Show detailed progress information              |
+| `--debug`                     | Show debug information                          |
+| `-q, --quiet`                 | Suppress all output except the PR description   |
+| `--json`                      | Output results in JSON format                   |
+
+### PR Templates
+
+The tool automatically detects and uses your repository's PR template if one exists:
+
+**Checked locations (in order):**
+1. `.github/PULL_REQUEST_TEMPLATE.md`
+2. `.github/pull_request_template.md`
+3. `PULL_REQUEST_TEMPLATE.md`
+4. `pull_request_template.md`
+5. `.github/PULL_REQUEST_TEMPLATE/default.md`
+
+If no template is found, a sensible default template is used with Summary, Changes, Testing, and Checklist sections.
+
+### Example Output
+
+```
+## Summary
+
+Implements OAuth2 authentication flow for third-party integrations, allowing users to connect external services securely.
+
+## Changes
+
+- Add OAuth2 authorization endpoint in `src/auth/oauth.ts`
+- Implement token exchange and refresh logic
+- Create callback handler for OAuth redirects
+- Add secure token storage using encrypted cookies
+- Update user model to store OAuth provider connections
+
+## Testing
+
+- Unit tests added for token exchange logic
+- Integration tests for OAuth flow with mock provider
+- Manual testing with Google and GitHub OAuth
+
+## Checklist
+
+- [ ] Code follows project conventions
+- [ ] Tests added/updated as needed
+- [ ] Documentation updated as needed
+```
+
+### Tips
+
+- **Use context**: The `-d` flag helps the AI understand the purpose of your changes beyond what the code diff shows
+- **Token limits**: PR descriptions benefit from higher token limits. Set `AIC_MAX_TOKENS=800` or higher for comprehensive descriptions
+- **Custom templates**: Create a `.github/PULL_REQUEST_TEMPLATE.md` file to ensure consistent PR formats across your team
 
 ## Troubleshooting
 

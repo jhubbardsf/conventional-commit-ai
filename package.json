@@ -10,7 +10,7 @@
     "ai-conventional-commit": "./dist/cli.js"
   },
   "scripts": {
-    "build": "bun build src/cli.ts --outdir dist --target node --format esm --minify --external commander --external simple-git --external openai --external @anthropic-ai/sdk --external @google/generative-ai --external cosmiconfig --external minimatch --external zod --external picocolors",
+    "build": "bun build src/cli.ts --outdir dist --target node --format esm --minify --external commander --external simple-git --external openai --external @anthropic-ai/sdk --external @google/generative-ai --external cosmiconfig --external minimatch --external zod --external picocolors --external clipboardy",
     "build:bundle": "bun build src/cli.ts --outdir dist --target node --format esm --minify",
     "dev": "bun run src/cli.ts",
     "lint": "eslint src --ext .ts",
@@ -56,7 +56,8 @@
     "cosmiconfig": "^9.0.0",
     "minimatch": "^9.0.3",
     "zod": "^3.22.4",
-    "picocolors": "^1.0.0"
+    "picocolors": "^1.0.0",
+    "clipboardy": "^4.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",

@@ -79,6 +79,43 @@ export class OpenAIProvider extends BaseAIProvider {
     }
   }
 
+  async generate(systemPrompt: string, userPrompt: string): Promise<string> {
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_tokens: this.maxTokens,
+        temperature: this.temperature,
+        top_p: 1,
+        frequency_penalty: 0,
+        presence_penalty: 0,
+      });
+
+      const message = response.choices[0]?.message?.content;
+      if (!message) {
+        throw new Error('OpenAI returned empty response');
+      }
+
+      return message.trim();
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('insufficient_quota')) {
+          throw new Error(
+            'OpenAI API quota exceeded. Please check your billing settings.'
+          );
+        }
+        if (error.message.includes('invalid_api_key')) {
+          throw new Error('Invalid OpenAI API key. Please check your API key.');
+        }
+        throw new Error(`OpenAI API error: ${error.message}`);
+      }
+      throw new Error('Unknown OpenAI error');
+    }
+  }
+
   validateConfig(): boolean {
     if (!this.apiKey || this.apiKey.trim() === '') {
       return false;

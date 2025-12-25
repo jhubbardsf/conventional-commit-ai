@@ -26,6 +26,12 @@ export abstract class BaseAIProvider implements AIProvider {
     detailed?: boolean
   ): Promise<string>;
 
+  /**
+   * Generic generation with custom prompts
+   * Used for PR descriptions and other non-commit use cases
+   */
+  abstract generate(systemPrompt: string, userPrompt: string): Promise<string>;
+
   abstract validateConfig(): boolean;
 
   /**
