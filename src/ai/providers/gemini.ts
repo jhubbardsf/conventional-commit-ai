@@ -119,6 +119,58 @@ export class GeminiProvider extends BaseAIProvider {
     }
   }
 
+  async generate(systemPrompt: string, userPrompt: string): Promise<string> {
+    try {
+      const model = this.client.getGenerativeModel({
+        model: this.model,
+        generationConfig: {
+          maxOutputTokens: this.maxTokens,
+          temperature: this.temperature,
+        },
+      });
+
+      const prompt = `${systemPrompt}\n\n${userPrompt}`;
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+
+      if (!response) {
+        throw new Error('Gemini returned no response');
+      }
+
+      const promptFeedback = response.promptFeedback;
+      if (promptFeedback?.blockReason) {
+        throw new Error(
+          `Gemini blocked the request: ${promptFeedback.blockReason}`
+        );
+      }
+
+      const candidates = response.candidates;
+      if (!candidates || candidates.length === 0) {
+        throw new Error('Gemini returned no candidate responses');
+      }
+
+      const text = response.text();
+      if (!text || text.trim() === '') {
+        throw new Error('Gemini returned empty response');
+      }
+
+      return text.trim();
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('API_KEY_INVALID')) {
+          throw new Error('Invalid Gemini API key. Please check your API key.');
+        }
+        if (error.message.includes('RATE_LIMIT_EXCEEDED')) {
+          throw new Error(
+            'Gemini API rate limit exceeded. Please try again later.'
+          );
+        }
+        throw new Error(`Gemini API error: ${error.message}`);
+      }
+      throw new Error('Unknown Gemini error');
+    }
+  }
+
   validateConfig(): boolean {
     if (!this.apiKey || this.apiKey.trim() === '') {
       return false;

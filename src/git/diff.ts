@@ -314,6 +314,120 @@ export async function getCurrentBranch(): Promise<string> {
 }
 
 /**
+ * Validate that a branch exists
+ */
+export async function validateBranchExists(branch: string): Promise<boolean> {
+  const git = simpleGit();
+
+  try {
+    await git.revparse(['--verify', branch]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get diff between current branch and a base branch
+ */
+export async function getBranchDiff(
+  baseBranch: string,
+  excludePatterns: string[] = []
+): Promise<GitDiffResult> {
+  const git = simpleGit();
+
+  try {
+    // Check if we're in a git repository
+    const isRepo = await git.checkIsRepo();
+    if (!isRepo) {
+      throw new Error(
+        'Not a git repository. Please run this command from within a git repository.'
+      );
+    }
+
+    // Validate that the base branch exists
+    const branchExists = await validateBranchExists(baseBranch);
+    if (!branchExists) {
+      throw new Error(
+        `Base branch '${baseBranch}' does not exist. Please specify a valid branch with --base.`
+      );
+    }
+
+    // Get list of changed files between branches
+    const changedFilesOutput = await git.diff([
+      `${baseBranch}...HEAD`,
+      '--name-only',
+    ]);
+
+    const allChangedFiles = changedFilesOutput
+      .split('\n')
+      .map((f) => f.trim())
+      .filter((f) => f.length > 0);
+
+    if (allChangedFiles.length === 0) {
+      return {
+        files: [],
+        diff: '',
+        hasChanges: false,
+      };
+    }
+
+    // Apply exclusion patterns and filter noise files
+    let filteredFiles = filterExcludedFiles(allChangedFiles, excludePatterns);
+    filteredFiles = filteredFiles.filter((file) => !isNoiseFile(file));
+
+    if (filteredFiles.length === 0) {
+      return {
+        files: allChangedFiles,
+        diff: '',
+        hasChanges: false,
+      };
+    }
+
+    // Get the full diff between branches with more context for PR review
+    const fullDiff = await git.diff([
+      `${baseBranch}...HEAD`,
+      '--no-color',
+      '--unified=3', // More context for PR descriptions
+    ]);
+
+    // Filter the diff to only include the files we want to process
+    const filteredDiff = filterDiffByFiles(fullDiff, filteredFiles);
+
+    // Apply diff optimizations to reduce token usage
+    const optimizedDiff = optimizeDiff(filteredDiff);
+
+    return {
+      files: filteredFiles,
+      diff: optimizedDiff.trim(),
+      hasChanges: optimizedDiff.trim().length > 0,
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Git operation failed: ${error.message}`);
+    }
+    throw new Error('Unknown git operation error');
+  }
+}
+
+/**
+ * Get the root directory of the git repository
+ */
+export async function getRepoRoot(): Promise<string> {
+  const git = simpleGit();
+
+  try {
+    const root = await git.revparse(['--show-toplevel']);
+    return root.trim();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to get repository root: ${error.message}`);
+    }
+    throw new Error('Unknown git error');
+  }
+}
+
+/**
  * Check repository status and validate it's ready for commit
  */
 export async function validateRepository(): Promise<{

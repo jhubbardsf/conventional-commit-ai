@@ -73,6 +73,38 @@ export class AnthropicProvider extends BaseAIProvider {
     }
   }
 
+  async generate(systemPrompt: string, userPrompt: string): Promise<string> {
+    try {
+      const completion = await this.client.completions.create({
+        model: this.model,
+        max_tokens_to_sample: this.maxTokens,
+        temperature: this.temperature,
+        prompt: `${systemPrompt}\n\nHuman: ${userPrompt}\n\nAssistant:`,
+      });
+
+      if (!completion.completion) {
+        throw new Error('Anthropic returned empty response');
+      }
+
+      return completion.completion.trim();
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('invalid_api_key')) {
+          throw new Error(
+            'Invalid Anthropic API key. Please check your API key.'
+          );
+        }
+        if (error.message.includes('rate_limit')) {
+          throw new Error(
+            'Anthropic API rate limit exceeded. Please try again later.'
+          );
+        }
+        throw new Error(`Anthropic API error: ${error.message}`);
+      }
+      throw new Error('Unknown Anthropic error');
+    }
+  }
+
   validateConfig(): boolean {
     if (!this.apiKey || this.apiKey.trim() === '') {
       return false;

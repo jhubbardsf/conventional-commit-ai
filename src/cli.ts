@@ -2,9 +2,16 @@
 
 import { Command } from 'commander';
 import * as readline from 'readline';
+import clipboard from 'clipboardy';
 import { loadConfig, validateApiKey } from './config/index.js';
 import { createAIProvider, validateProviderConfig } from './ai/index.js';
-import { getStagedDiff, validateRepository } from './git/diff.js';
+import {
+  getStagedDiff,
+  validateRepository,
+  getBranchDiff,
+  getCurrentBranch,
+  getRepoRoot,
+} from './git/diff.js';
 import {
   createCommit,
   validateConventionalCommit,
@@ -12,7 +19,8 @@ import {
 } from './git/commit.js';
 import { logger, LogLevel } from './utils/logger.js';
 import { validatePatterns } from './utils/patterns.js';
-import type { CLIOptions } from './types/index.js';
+import { getPRTemplate, generatePRDescription } from './pr/index.js';
+import type { CLIOptions, PRCLIOptions } from './types/index.js';
 
 const program = new Command();
 
@@ -80,6 +88,208 @@ program
       process.exit(1);
     }
   });
+
+// PR Description subcommand
+program
+  .command('pr')
+  .description('Generate AI-powered PR description for current branch')
+  .option('-b, --base <branch>', 'Base branch to compare against', 'dev')
+  .option('-d, --description <text>', 'Additional context for the AI')
+  .option('--no-clipboard', 'Do not copy to clipboard')
+  .option(
+    '-x, --exclude <patterns...>',
+    'File patterns to exclude from the diff (supports glob patterns)'
+  )
+  .option('--config <path>', 'Path to custom configuration file')
+  .option('--model <model>', 'AI model to use (overrides config)')
+  .option(
+    '--provider <provider>',
+    'AI provider to use: openai, anthropic, gemini, zai (overrides config)',
+    /^(openai|anthropic|gemini|zai)$/
+  )
+  .option(
+    '--max-tokens <number>',
+    'Maximum tokens for AI response (overrides config)',
+    (value) => {
+      const parsed = parseInt(value, 10);
+      if (isNaN(parsed) || parsed < 1 || parsed > 8000) {
+        throw new Error('max-tokens must be a number between 1 and 8000');
+      }
+      return parsed;
+    }
+  )
+  .option('-v, --verbose', 'Show detailed progress information')
+  .option('--debug', 'Show debug information including API requests/responses')
+  .option('-q, --quiet', 'Suppress all output except the PR description')
+  .option('--json', 'Output results in JSON format')
+  .action(async (options: PRCLIOptions) => {
+    try {
+      await runPRCommand(options);
+    } catch (error) {
+      if (error instanceof Error) {
+        logger.error(error.message);
+      } else {
+        logger.error('Unknown error occurred');
+      }
+      process.exit(1);
+    }
+  });
+
+async function runPRCommand(options: PRCLIOptions): Promise<void> {
+  // Configure logger based on options
+  if (options.quiet) {
+    logger.setLevel(LogLevel.ERROR);
+  } else if (options.debug) {
+    logger.setLevel(LogLevel.DEBUG);
+  } else if (options.verbose) {
+    logger.setLevel(LogLevel.VERBOSE);
+  }
+
+  if (options.json) {
+    logger.setJsonMode(true);
+  }
+
+  logger.verbose('Starting PR description generator');
+
+  // Get repository info
+  logger.progress('Getting repository information');
+  const repoRoot = await getRepoRoot();
+  const currentBranch = await getCurrentBranch();
+  logger.progressDone(`On branch: ${currentBranch}`);
+
+  // Load configuration (reusing commit config infrastructure)
+  logger.progress('Loading configuration');
+  const cliOptions: CLIOptions = {
+    config: options.config,
+    model: options.model,
+    provider: options.provider,
+    maxTokens: options.maxTokens,
+    exclude: options.exclude,
+    verbose: options.verbose,
+    debug: options.debug,
+    quiet: options.quiet,
+  };
+
+  let config;
+  try {
+    config = loadConfig(cliOptions);
+    logger.progressDone('Configuration loaded');
+  } catch (error) {
+    logger.progressFailed('Configuration loading failed');
+    throw error;
+  }
+
+  logger.verbose(`Using provider: ${config.provider}`);
+  logger.verbose(`Using model: ${config.model}`);
+
+  // Validate patterns if provided
+  if (options.exclude && options.exclude.length > 0) {
+    const patternValidation = validatePatterns(options.exclude);
+    if (patternValidation.invalid.length > 0) {
+      logger.warn(
+        `Invalid exclusion patterns: ${patternValidation.invalid.join(', ')}`
+      );
+    }
+  }
+
+  // Validate API key
+  logger.progress('Validating API configuration');
+  const apiKeyValidation = validateApiKey(config);
+  if (!apiKeyValidation.valid) {
+    logger.progressFailed('API key validation failed');
+    throw new Error(apiKeyValidation.error);
+  }
+
+  const providerValidation = validateProviderConfig(config);
+  if (!providerValidation.valid) {
+    logger.progressFailed('Provider configuration validation failed');
+    throw new Error(providerValidation.error);
+  }
+  logger.progressDone('API configuration validated');
+
+  // Get diff between branches
+  logger.progress(`Comparing ${currentBranch} to ${options.base}`);
+  const diffResult = await getBranchDiff(options.base, config.excludePatterns);
+
+  if (!diffResult.hasChanges) {
+    logger.progressFailed('No changes found');
+    if (diffResult.files.length === 0) {
+      throw new Error(
+        `No differences found between ${currentBranch} and ${options.base}. ` +
+          `Are you on the right branch?`
+      );
+    } else {
+      throw new Error(
+        `All changed files (${diffResult.files.length}) were excluded by patterns.`
+      );
+    }
+  }
+
+  logger.progressDone(`Found ${diffResult.files.length} changed files`);
+  logger.verbose(`Changed files: ${diffResult.files.join(', ')}`);
+
+  // Load PR template
+  logger.progress('Loading PR template');
+  const { template, isCustom } = await getPRTemplate(repoRoot);
+  logger.progressDone(
+    isCustom ? 'Using custom PR template' : 'Using default PR template'
+  );
+
+  // Create AI provider
+  logger.progress('Initializing AI provider');
+  const aiProvider = createAIProvider(config);
+  logger.progressDone(`${config.provider} provider initialized`);
+
+  // Generate PR description
+  logger.progress('Generating PR description');
+  let prDescription;
+  try {
+    prDescription = await generatePRDescription(
+      aiProvider,
+      diffResult.diff,
+      template,
+      currentBranch,
+      options.description
+    );
+    logger.progressDone('PR description generated');
+  } catch (error) {
+    logger.progressFailed('PR description generation failed');
+    throw error;
+  }
+
+  // Output the result
+  if (options.json) {
+    const result = {
+      description: prDescription,
+      provider: config.provider,
+      model: config.model,
+      baseBranch: options.base,
+      currentBranch: currentBranch,
+      filesChanged: diffResult.files,
+      copiedToClipboard: options.clipboard,
+    };
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log('\n' + prDescription + '\n');
+  }
+
+  // Copy to clipboard
+  if (options.clipboard) {
+    try {
+      await clipboard.write(prDescription);
+      if (!options.quiet && !options.json) {
+        logger.success('PR description copied to clipboard');
+      }
+    } catch (error) {
+      // Clipboard may not be available in CI environments
+      if (!options.quiet && !options.json) {
+        logger.warn('Could not copy to clipboard (clipboard may not be available)');
+      }
+    }
+  }
+
+  logger.verbose('PR description generator completed successfully');
+}
 
 async function runCLI(options: CLIOptions): Promise<void> {
   // Configure logger based on options

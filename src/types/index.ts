@@ -6,6 +6,11 @@ export interface AIProvider {
     choices?: number,
     detailed?: boolean
   ): Promise<string>;
+  /**
+   * Generic generation method with custom prompts
+   * Used for PR descriptions and other non-commit use cases
+   */
+  generate(systemPrompt: string, userPrompt: string): Promise<string>;
   validateConfig(): boolean;
 }
 
@@ -51,4 +56,28 @@ export interface GitDiffResult {
   files: string[];
   diff: string;
   hasChanges: boolean;
+}
+
+export interface PRCLIOptions {
+  base: string;
+  description?: string;
+  clipboard: boolean;
+  exclude?: string[];
+  config?: string;
+  model?: string;
+  provider?: 'openai' | 'anthropic' | 'gemini' | 'zai';
+  maxTokens?: number;
+  verbose?: boolean;
+  debug?: boolean;
+  quiet?: boolean;
+  json?: boolean;
+}
+
+export interface PRGenerationResult {
+  description: string;
+  provider: string;
+  model: string;
+  baseBranch: string;
+  currentBranch: string;
+  filesChanged: string[];
 }

@@ -112,6 +112,51 @@ export class ZAIProvider extends OpenAIProvider {
     }
   }
 
+  override async generate(
+    systemPrompt: string,
+    userPrompt: string
+  ): Promise<string> {
+    const isDebug =
+      process.env.DEBUG === 'true' || process.env.AIC_DEBUG === 'true';
+
+    if (isDebug) {
+      console.error('\n[ZAI Debug] Generate Request:');
+      console.error(`  Provider: ${this.name}`);
+      console.error(`  Model: ${this.model}`);
+    }
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_tokens: this.maxTokens,
+        temperature: this.temperature,
+        top_p: 1,
+        frequency_penalty: 0,
+        presence_penalty: 0,
+      });
+
+      const message = response.choices[0]?.message?.content;
+      if (!message) {
+        throw new Error('ZAI returned empty response');
+      }
+
+      return message.trim();
+    } catch (error) {
+      if (isDebug) {
+        console.error('\n[ZAI Debug] Error:', error);
+      }
+
+      if (error instanceof Error) {
+        throw new Error(`ZAI API error: ${error.message}`);
+      }
+      throw new Error('Unknown ZAI error');
+    }
+  }
+
   override validateConfig(): boolean {
     // ZAI API keys don't have a specific format requirement
     return !!(this.apiKey && this.apiKey.trim());
